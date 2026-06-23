@@ -27,6 +27,7 @@ def _build_db() -> FAISS:
     db = FAISS.from_documents(chunks, embeddings)
     logger.info("Generated FAQ db")
 
+    FAQ_INDEX.mkdir(parents=True, exist_ok=True)
     db.save_local(str(FAQ_INDEX))
     logger.info("FAQ db saved locally")
 

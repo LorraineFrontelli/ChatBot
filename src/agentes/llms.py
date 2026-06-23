@@ -1,6 +1,9 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
+from dotenv import load_dotenv
 import os
+
+load_dotenv()
 
 llm_gemini = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
@@ -22,3 +25,6 @@ llm_rapido = ChatGroq(
     temperature=0.0,
     api_key=os.getenv("GROQ_API_KEY"),
 )
+
+specialist_llm = llm_especialista
+fast_llm = llm_rapido

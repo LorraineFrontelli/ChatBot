@@ -72,7 +72,7 @@ PostgreSQL com 4 tabelas:
 ```bash
 pip install langchain langchain-google-genai langchain-groq langchain-community
 pip install langgraph psycopg2-binary pydantic-settings python-dotenv
-pip install faiss-cpu pypdf langchain-text-splitters rich
+pip install faiss-cpu pypdf langchain-text-splitters rich pymongo
 ```
 
 ### 2. Configurar variáveis de ambiente
@@ -87,6 +87,8 @@ PGUSER=seu_usuario
 POSTGRES_PASSWORD=sua_senha
 POSTGRES_DB=nome_do_banco
 DB_PORT=5432
+
+MONGODB_URI=mongodb+srv://usuario:senha@cluster.mongodb.net/?retryWrites=true&w=majority
 ```
 
 ### 3. Criar o banco de dados
