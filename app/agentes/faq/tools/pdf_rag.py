@@ -2,7 +2,7 @@ import logging
 
 from langchain.tools import tool
 
-from src.infraestrutura.faiss_store import get_faq_db
+from app.rag.vectorstore.faiss_store import get_faq_db
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,7 @@ import logging
 
 from langchain.tools import tool
 
-from src.infraestrutura.db_connection import get_cursor
+from app.infra.database.postgres_client import get_cursor
 
 logger = logging.getLogger(__name__)
 

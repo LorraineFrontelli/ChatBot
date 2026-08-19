@@ -4,18 +4,19 @@ Verificações de segurança e compliance do assessor financeiro.
 ENTRADA  → anonimizar → checar injeção → checar dados internos → classificar (LLM)
 SAÍDA    → redigir PII → desanonimizar → revisar compliance (LLM)
 """
-import os
+import logging
 import re
 import uuid
-from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 
-load_dotenv()
+from app.core.config.settings import settings
+
+logger = logging.getLogger(__name__)
 
 llm = ChatGroq(
-    model="llama-3.3-70b-versatile", 
-    temperature=0.0, 
-    api_key=os.getenv("GROQ_API_KEY")
+    model="llama-3.3-70b-versatile",
+    temperature=0.0,
+    api_key=settings.GROQ_API_KEY
 )
 
 # ==============================================================================
@@ -53,7 +54,7 @@ def anonimizar_entrada(texto):
         for valor in matches:
             token = f"[PII_{tipo}_{uuid.uuid4().hex[:6]}]"
             mapa[token] = valor
-            texto = texto.replace(valor, token, 1)
+            texto = texto.replace(valor, token)  # todas as ocorrências
 
     return texto, mapa
 
@@ -182,9 +183,13 @@ def guardrail_saida(resposta, mapa_pii, restaurar_pii=False):
     # 2. Resolve tokens de PII da entrada
     resposta = desanonimizar_saida(resposta, mapa_pii, restaurar=restaurar_pii)
 
-    # 3. Revisão de compliance financeiro
-    saida = llm.invoke(_PROMPT_COMPLIANCE.format(resposta=resposta)).content.strip()
-    if "RESPOSTA:" in saida:
-        resposta = saida.split("RESPOSTA:", 1)[1].strip() or resposta
+    # 3. Revisão de compliance financeiro. Se a LLM falhar, entrega o texto já
+    # limpo de PII sem a revisão extra — nunca trava a resposta por causa disso.
+    try:
+        saida = llm.invoke(_PROMPT_COMPLIANCE.format(resposta=resposta)).content.strip()
+        if "RESPOSTA:" in saida:
+            resposta = saida.split("RESPOSTA:", 1)[1].strip() or resposta
+    except Exception:
+        logger.exception("Revisão de compliance falhou; entregando resposta sem revisão extra.")
 
     return _saida_ok(resposta)

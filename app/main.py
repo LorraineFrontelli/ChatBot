@@ -1,11 +1,20 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.config.settings import validar_config
 from app.routes import chat
-from app.config import validar_config          
 
 app = FastAPI(
     title="Assessor IA",
     description="Assessor financeiro e de agenda com LanghChain e LanghGraph.",
     version="0.1.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],   # em produção, trocar "*" pela URL real do frontend
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 for _problema in validar_config():                 # logo antes de app = FastAPI(...)

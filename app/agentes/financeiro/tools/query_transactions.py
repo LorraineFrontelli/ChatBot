@@ -5,8 +5,8 @@ from datetime import date
 from langchain.tools import tool
 from pydantic import BaseModel, Field
 
-from src.infraestrutura.db_connection import get_cursor
-from src.agentes.financeiro.tools.utils import resolve_type_id, resolve_category_id
+from app.infra.database.postgres_client import get_cursor
+from app.agentes.financeiro.tools.utils import resolve_type_id, resolve_category_id
 
 logger = logging.getLogger(__name__)
 
