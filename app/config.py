@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# BASE_DIR aponta para migracao_fastAPI/. Montado a partir da localização
+# BASE_DIR aponta para a raiz do projeto. Montado a partir da localização
 # do próprio arquivo: não depende da pasta de onde você rodou o uvicorn.
 BASE_DIR     = Path(__file__).resolve().parent.parent
 DATA_DIR     = BASE_DIR / "data"

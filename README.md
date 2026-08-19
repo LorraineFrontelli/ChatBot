@@ -100,7 +100,7 @@ psql -U seu_usuario -d nome_do_banco -f sql/ScriptBancoDeDados.sql
 ### 4. Executar
 
 ```bash
-python -m src.main
+uvicorn app.main:app --reload
 ```
 
 ---
