@@ -1,5 +1,6 @@
 from langgraph.graph import END, StateGraph
 
+from app.guardrail import anonimizar_entrada
 from app.memory.session.mongo_checkpointer import get_checkpointer
 from app.workflow.edges.routing_edges import decidir_pos_guardrail_entrada, decidir_pos_router
 from app.workflow.nodes.agenda_node import agenda_node
@@ -43,11 +44,14 @@ fluxo_agentes = build_graph()
 
 def executar_fluxo(pergunta: str, session_id: str) -> dict:
     """É isto que a rota /chat chama."""
+    mensagem_anon, mapa_pii = anonimizar_entrada(pergunta)
+
     resultado = fluxo_agentes.invoke(
-        {"messages": [{"role": "human", "content": pergunta}]},
+        {"messages": [{"role": "human", "content": mensagem_anon}], "mapa_pii": mapa_pii},
         config={"configurable": {"thread_id": session_id}},
     )
     return {
         "resposta": resultado["messages"][-1].content,
         "agentes_chamados": resultado.get("agentes_chamados", []),
+        "pergunta_anonimizada": mensagem_anon,
     }

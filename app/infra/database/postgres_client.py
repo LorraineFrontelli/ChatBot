@@ -1,16 +1,27 @@
-"""Conexão com o Postgres para as tools financeiras."""
+"""Conexão com o Postgres para as tools financeiras, via pool"""
 
 from contextlib import contextmanager
 
-import psycopg2
+from psycopg2 import pool
 
 from app.core.config.settings import settings
+
+_pool: pool.ThreadedConnectionPool | None = None
+
+
+def _get_pool() -> pool.ThreadedConnectionPool:
+    global _pool
+    if _pool is None:
+        _pool = pool.ThreadedConnectionPool(
+            minconn=1, maxconn=10, dsn=settings.DATABASE_URL
+        )
+    return _pool
 
 
 @contextmanager
 def get_cursor():
-    """Abre uma conexão, entrega um cursor, comita ao sair, sempre fecha."""
-    conn = psycopg2.connect(settings.DATABASE_URL)
+    """Empresta uma conexão do pool, entrega um cursor, devolve ao sair."""
+    conn = _get_pool().getconn()
     try:
         with conn.cursor() as cur:
             yield cur
@@ -19,4 +30,4 @@ def get_cursor():
         conn.rollback()
         raise
     finally:
-        conn.close()
+        _get_pool().putconn(conn)

@@ -13,7 +13,7 @@ langchain-text-splitters==1.1.1
 langgraph==1.0.10
 langgraph-checkpoint-mongodb==0.4.0
 
-psycopg2==2.9.11
+psycopg2-binary==2.9.11
 pymongo==4.16.0
 
 faiss-cpu==1.14.3

@@ -1,17 +1,15 @@
 import logging
 
-from app.guardrail import anonimizar_entrada, guardrail_entrada
+from app.guardrail import guardrail_entrada
 
 logger = logging.getLogger(__name__)
 
 
 def guardrail_entrada_node(state: dict) -> dict:
-    """Anonimiza a entrada e roda as checagens de segurança. Se a
-    classificação via LLM falhar, bloqueia por padrão (fail-closed) em vez
-    de deixar a mensagem passar sem checagem."""
-    user_input = state["messages"][-1].content
-
-    mensagem_anon, mapa_pii = anonimizar_entrada(user_input)
+    """A mensagem já chega anonimizada — executar_fluxo faz isso antes de
+    invocar o grafo. Aqui só roda as checagens de segurança."""
+    mensagem_anon = state["messages"][-1].content
+    mapa_pii = state.get("mapa_pii", {})
 
     try:
         check = guardrail_entrada(mensagem_anon)

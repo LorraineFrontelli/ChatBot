@@ -14,13 +14,21 @@ def _collection():
     return col
 
 
-def salvar_mensagem(session_id: str, role: str, content: str) -> None:
-    _collection().insert_one({
+def salvar_mensagem(
+    session_id: str,
+    role: str,
+    content: str,
+    agentes_chamados: list[str] | None = None,
+) -> None:
+    doc = {
         "session_id": session_id,
         "role": role,
         "content": content,
         "timestamp": datetime.now(timezone.utc),
-    })
+    }
+    if agentes_chamados:
+        doc["agentes_chamados"] = agentes_chamados
+    _collection().insert_one(doc)
 
 
 def recuperar_historico(session_id: str, limite: int = 8) -> list[dict]:

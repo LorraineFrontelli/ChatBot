@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config.settings import validar_config
 from app.routes import chat
@@ -29,3 +30,7 @@ def health() -> dict:
     }
 
 app.include_router(chat.router)
+
+# Precisa vir por último: é um catch-all em "/", se viesse antes
+# interceptaria as rotas /health e /chat.
+app.mount("/", StaticFiles(directory="app/frontend", html=True), name="frontend")
