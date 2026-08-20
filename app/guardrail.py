@@ -7,17 +7,10 @@ SAÍDA    → redigir PII → desanonimizar → revisar compliance (LLM)
 import logging
 import re
 import uuid
-from langchain_groq import ChatGroq
 
-from app.core.config.settings import settings
+from app.agentes.llms import llm_guardrail as llm
 
 logger = logging.getLogger(__name__)
-
-llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
-    temperature=0.0,
-    api_key=settings.GROQ_API_KEY
-)
 
 # ==============================================================================
 # PII — padrões usados tanto na entrada quanto na saída

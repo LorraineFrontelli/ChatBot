@@ -24,5 +24,11 @@ llm_rapido = ChatGroq(
     api_key=settings.GROQ_API_KEY,
 )
 
+llm_guardrail = ChatGroq(
+    model="llama-3.3-70b-versatile",
+    temperature=0.0,
+    api_key=settings.GROQ_API_KEY,
+)
+
 specialist_llm = llm_especialista
 fast_llm = llm_rapido
