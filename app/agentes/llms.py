@@ -11,7 +11,7 @@ llm_gemini = ChatGoogleGenerativeAI(
 )
 
 llm_groq = ChatGroq(
-    model="llama-3.3-70b-versatile",
+    model="openai/gpt-oss-120b",
     temperature=0.7,
     api_key=settings.GROQ_API_KEY,
 )
@@ -25,7 +25,7 @@ llm_rapido = ChatGroq(
 )
 
 llm_guardrail = ChatGroq(
-    model="llama-3.3-70b-versatile",
+    model="openai/gpt-oss-120b",
     temperature=0.0,
     api_key=settings.GROQ_API_KEY,
 )
