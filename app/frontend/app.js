@@ -4,6 +4,7 @@
 // Ajuste para a URL onde o FastAPI está rodando.
 const API_BASE = "http://localhost:8000";
 const CHAT_ENDPOINT = `${API_BASE}/chat`;
+const SESSION_END_ENDPOINT = `${API_BASE}/session/end`;
 
 // ============================================================
 // Elementos
@@ -39,10 +40,21 @@ function obterOuCriarSessionId() {
   return id;
 }
 
+function encerrarSessaoBeacon(id) {
+  // sendBeacon dispara mesmo durante o fechar da aba/página (um fetch normal
+  // pode ser cancelado nesse momento). Não é garantido a 100% — o SO pode
+  // matar o processo antes —, mas é o melhor esforço possível no browser.
+  const payload = JSON.stringify({ session_id: id });
+  const blob = new Blob([payload], { type: "application/json" });
+  navigator.sendBeacon(SESSION_END_ENDPOINT, blob);
+}
+
 function iniciarNovaSessao() {
-  const id = gerarSessionId();
-  localStorage.setItem(SESSION_STORAGE_KEY, id);
-  exibirSessionId(id);
+  encerrarSessaoBeacon(sessionId); // fecha (resume) a sessão anterior antes de trocar
+
+  sessionId = gerarSessionId();
+  localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
+  exibirSessionId(sessionId);
   thread.innerHTML = "";
   thread.appendChild(threadEmpty);
   threadEmpty.style.display = "block";
@@ -58,6 +70,12 @@ let sessionId = obterOuCriarSessionId();
 exibirSessionId(sessionId);
 
 resetButton.addEventListener("click", iniciarNovaSessao);
+
+// Cobre o fechar de aba/navegador — pagehide dispara de forma mais confiável
+// que beforeunload (inclusive com bfcache).
+window.addEventListener("pagehide", () => {
+  encerrarSessaoBeacon(sessionId);
+});
 
 // ============================================================
 // Utilidades de UI

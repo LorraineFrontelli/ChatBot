@@ -34,3 +34,17 @@ def salvar_mensagem(
 def recuperar_historico(session_id: str, limite: int = 8) -> list[dict]:
     docs = _collection().find({"session_id": session_id}).sort("timestamp", -1).limit(limite)
     return list(reversed(list(docs)))
+
+
+def recuperar_mensagens_desde(session_id: str, desde: datetime | None) -> list[dict]:
+    """Todas as mensagens da sessão a partir de `desde` (exclusive), em ordem
+    cronológica. `desde=None` traz o histórico inteiro da sessão."""
+    filtro: dict = {"session_id": session_id}
+    if desde is not None:
+        filtro["timestamp"] = {"$gt": desde}
+    return list(_collection().find(filtro).sort("timestamp", 1))
+
+
+def timestamp_ultima_mensagem(session_id: str) -> datetime | None:
+    doc = _collection().find_one({"session_id": session_id}, sort=[("timestamp", -1)])
+    return doc["timestamp"] if doc else None

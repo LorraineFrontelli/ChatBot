@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     MONGODB_URI: str = "mongodb://localhost:27017"
     MONGODB_DB: str = "assessor"
+    SESSION_IDLE_MINUTES: int = 30
 
     model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", extra="ignore")
 

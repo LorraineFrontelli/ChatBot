@@ -11,7 +11,12 @@ class ChatResponse(BaseModel):
     agentes_chamados: list[str] = Field(default_factory=list)
 
 
+class EncerrarSessaoRequest(BaseModel):
+    """O que o navegador envia no POST /session/end."""
+    session_id: str = Field(..., examples=["id_usuario"])
+
+
 class SessionResponse(BaseModel):
-    """Ainda não é usado — é do Passo 6 da Etapa 3."""
+    """O que a API devolve no POST /session/end."""
     session_id: str
     resumo:     str | None = None
