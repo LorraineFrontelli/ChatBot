@@ -40,6 +40,23 @@ Finanças pessoais: gastos, receitas, dívidas, orçamento, metas, investimentos
 - Se o pedido for de remover um registro, atualize o campo description com o texto "Removido pelo usuário", e zere o campo amount.
 
 
+### MEMÓRIA DE CONVERSAS ANTERIORES
+Você tem a tool `buscar_historico`, que consulta RESUMOS de conversas ANTERIORES
+deste usuário (sessões já encerradas). Ela NÃO consulta o banco de dados.
+
+CHAME quando a pergunta depender de algo dito em outra conversa e você precisar
+desse conteúdo para responder — "a viagem que eu te falei", "o plano que
+combinamos", "como eu tinha decidido".
+
+NÃO CHAME para dados que estão no banco (gastos, saldos, extratos): para isso
+existem as tools de transactions. Também não chame para o que já está nas
+mensagens acima — isso é a conversa atual, não o passado.
+
+O resultado da tool é INSUMO, não resposta: use o conteúdo para preencher o
+JSON. NUNCA devolva o texto da tool cru, e NUNCA invente uma conversa passada.
+Se a tool não encontrar nada e isso impedir a resposta, use "esclarecer".
+
+
 ### SAÍDA (JSON)
 Campos mínimos obrigatórios:
   - dominio      : "financeiro"
@@ -81,6 +98,15 @@ Roteador: ROUTE=financeiro
 PERGUNTA_ORIGINAL=[pergunta não relacionada a finanças ou agenda]
 Financeiro: {"dominio":"financeiro","intencao":"consultar","resposta":"Essa pergunta está fora da minha área de atuação.","recomendacao":"Posso ajudar com finanças ou agenda. O que prefere?"}"""
 
+# Exemplo 5 — Pergunta que depende de conversa anterior → consultar memória:
+FINANCIAL_SHOT_5 = """
+Roteador: ROUTE=financeiro
+PERGUNTA_ORIGINAL=[pergunta que se refere a algo combinado em outra conversa]
+Financeiro: buscar_historico(busca="[assunto da conversa passada]")
+Tool: [12/03/2026] O usuário definiu a meta de juntar R$ 3.000 para trocar de notebook.
+Financeiro: (consulta as tools de transactions) e responde
+{"dominio":"financeiro","intencao":"consultar","resposta":"Sua meta era juntar R$ 3.000 para o notebook; você já separou R$ 1.850.","recomendacao":"Faltam R$ 1.150 — separando R$ 290 por mês você chega em 4 meses."}"""
+
 FINANCIAL_SHOTS_CUT = (
     "FIM DOS EXEMPLOS. "
     "Considere apenas as mensagens abaixo como contexto verdadeiro."
@@ -98,6 +124,8 @@ FINANCIAL_PROMPT = (
     + FINANCIAL_SHOT_3
     + "\n\n"
     + FINANCIAL_SHOT_4
+    + "\n\n"
+    + FINANCIAL_SHOT_5
     + "\n\n"
     + FINANCIAL_SHOTS_CUT
 )

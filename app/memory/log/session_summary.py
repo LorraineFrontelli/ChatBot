@@ -44,6 +44,24 @@ def buscar_ultimo_resumo(session_id: str) -> dict | None:
     return _collection().find_one({"session_id": session_id}, sort=[("encerrada_em", -1)])
 
 
+def buscar_resumos(session_id: str, busca: str | None = None, limite: int = 3) -> list[dict]:
+    """Resumos de blocos já encerrados deste session_id, mais recentes primeiro.
+
+    Usada pela tool `buscar_historico` (app/memory/tools/). O filtro
+    `resumo $nin ["", None]` é essencial: sem ele, um bloco em andamento
+    (ainda sem resumo) poderia aparecer como se já fosse "passado".
+    Se `busca` for passado, filtra por resumos que contenham o termo
+    (case-insensitive) — é uma busca literal, não semântica: sinônimo do
+    termo usado no resumo original não casa.
+    """
+    filtro: dict = {"session_id": session_id, "resumo": {"$nin": ["", None]}}
+    if busca:
+        filtro["resumo"]["$regex"] = busca
+        filtro["resumo"]["$options"] = "i"
+    docs = _collection().find(filtro).sort("encerrada_em", -1).limit(limite)
+    return list(docs)
+
+
 def _formatar_conversa(mensagens: list[dict]) -> str:
     return "\n".join(f"{m['role']}: {m['content']}" for m in mensagens)
 

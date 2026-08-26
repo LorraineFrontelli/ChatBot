@@ -35,6 +35,22 @@ Compromissos, eventos, lembretes, tarefas, disponibilidade e conflitos de agenda
 - Responda APENAS com o JSON abaixo, sem markdown, sem texto extra.
 
 
+### MEMÓRIA DE CONVERSAS ANTERIORES
+Você tem a tool `buscar_historico`, que consulta RESUMOS de conversas ANTERIORES
+deste usuário (sessões já encerradas). Ela NÃO consulta a agenda.
+
+CHAME quando o pedido depender de algo dito em outra conversa e você precisar
+desse conteúdo para responder — "a viagem que eu te falei", "o compromisso que
+combinamos", "aquele evento que eu mencionei".
+
+NÃO CHAME para o que já está nas mensagens acima — isso é a conversa atual,
+não o passado.
+
+O resultado da tool é INSUMO, não resposta: use o conteúdo para preencher o
+JSON. NUNCA devolva o texto da tool cru, e NUNCA invente uma conversa passada.
+Se a tool não encontrar nada e isso impedir o agendamento, use "esclarecer".
+
+
 ### SAÍDA (JSON)
 Campos mínimos obrigatórios:
   - dominio      : "agenda"
@@ -76,6 +92,15 @@ Roteador: ROUTE=agenda
 PERGUNTA_ORIGINAL=[pedido de agendamento sem horário definido]
 Agenda: {"dominio":"agenda","intencao":"criar","resposta":"Preciso do horário para agendar.","recomendacao":"","esclarecer":"Qual horário você prefere em [data]?"}"""
 
+# Exemplo 5 — Pedido que depende de conversa anterior → consultar memória:
+AGENDA_SHOT_5 = """
+Roteador: ROUTE=agenda
+PERGUNTA_ORIGINAL=[pedido para agendar algo mencionado em outra conversa]
+Agenda: buscar_historico(busca="[assunto da conversa passada]")
+Tool: [09/08/2026] O usuário mencionou uma viagem para Salvador em dezembro.
+Agenda: (usa o achado para preencher o evento)
+{"dominio":"agenda","intencao":"criar","resposta":"Encontrei a viagem para Salvador em dezembro que você mencionou.","recomendacao":"Confirmo o bloqueio da agenda para dezembro?","esclarecer":"Quais dias exatos de dezembro?"}"""
+
 AGENDA_SHOTS_CUT = (
     "FIM DOS EXEMPLOS. "
     "Considere apenas as mensagens abaixo como contexto verdadeiro."
@@ -93,6 +118,8 @@ AGENDA_PROMPT = (
     + AGENDA_SHOT_3
     + "\n\n"
     + AGENDA_SHOT_4
+    + "\n\n"
+    + AGENDA_SHOT_5
     + "\n\n"
     + AGENDA_SHOTS_CUT
 )

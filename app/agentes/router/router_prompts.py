@@ -32,9 +32,36 @@ BASE_ROUTER_PROMPT = f"""
 - faq        : dúvidas sobre o Assessor.IA - regras, políticas, termos, responsabilidades restrições, privacidade, segurança, comportamento previsto do sistema.
 
 
-### PROTOCOLO DE ENCAMINHAMENTO 
+### PROTOCOLO DE ENCAMINHAMENTO
 ROUTE=[financeiro|agenda|faq]
 PERGUNTA_ORIGINAL=[mensagem completa do usuário, sem edições]
+
+
+### MEMÓRIA DE CONVERSAS ANTERIORES
+Você tem a tool `buscar_historico`, que consulta os RESUMOS de conversas
+ANTERIORES deste usuário (sessões já encerradas).
+
+QUANDO CHAMAR:
+- O usuário se refere explicitamente ao passado: "o que eu te falei sobre...",
+  "lembra que eu comentei...", "na nossa última conversa...", "eu já tinha dito".
+
+QUANDO NÃO CHAMAR:
+- Dados que estão no banco — gastos, saldos, extratos, eventos agendados.
+  Isso é trabalho dos especialistas (financeiro/agenda), NÃO da memória.
+- A conversa atual: o histórico recente já está nas mensagens acima.
+
+O QUE FAZER COM O RESULTADO:
+- Se a memória responde sozinha a pergunta, responda direto ao usuário em
+  linguagem natural e NÃO emita ROUTE=.
+- Se a memória apenas esclarece a intenção, use-a para decidir e emita ROUTE=
+  normalmente.
+- Se a tool devolver QUALQUER resumo, você DEVE usar o conteúdo dele na sua
+  resposta. Leia o texto retornado e responda com base nele.
+- Diga que não encontrou APENAS se a tool devolver literalmente
+  "Nenhuma conversa anterior relevante encontrada". NUNCA invente uma conversa
+  passada, e nunca ignore um resumo que a tool trouxe.
+- A `busca` deve ser o SUBSTANTIVO do assunto, como apareceria num resumo
+  ("viagem", "mercado", "relatório"), não o verbo da pergunta ("viajar").
 
 """
 ROUTER_SHOTS_OPEN = (
@@ -74,6 +101,20 @@ ROUTE=agenda
 PERGUNTA_ORIGINAL=[mensagem completa do usuário]
 """
 
+# Exemplo 6 — Memória ENCONTROU algo → usar o conteúdo na resposta:
+ROUTER_SHOT_6 = """
+Usuário: Qual era mesmo a loja que eu te falei?
+Roteador: buscar_historico(busca="loja")
+Tool: [12/03/2026] O usuário comentou que comprou uma cadeira na loja Móveis Prado e achou o frete caro.
+Roteador: Em 12/03 você comentou da Móveis Prado — comprou uma cadeira lá e achou o frete caro."""
+
+# Exemplo 7 — Memória NÃO encontrou nada → admitir, sem inventar:
+ROUTER_SHOT_7 = """
+Usuário: O que eu te disse sobre o curso de inglês?
+Roteador: buscar_historico(busca="curso de inglês")
+Tool: Nenhuma conversa anterior relevante encontrada.
+Roteador: Não encontrei registro disso nas nossas conversas anteriores. Quer me contar de novo?"""
+
 ROUTER_SHOTS_CUT = (
     "FIM DOS EXEMPLOS. "
     "Considere apenas as mensagens abaixo como contexto verdadeiro."
@@ -93,6 +134,10 @@ ROUTER_PROMPT = (
     + ROUTER_SHOT_4
     + "\n\n"
     + ROUTER_SHOT_5
+    + "\n\n"
+    + ROUTER_SHOT_6
+    + "\n\n"
+    + ROUTER_SHOT_7
     + "\n\n"
     + ROUTER_SHOTS_CUT
 )
