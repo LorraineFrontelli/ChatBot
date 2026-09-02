@@ -2,7 +2,7 @@ import logging
 
 from langchain.tools import tool
 
-from app.rag.vectorstore.faiss_store import get_faq_db
+from app.vectorstore import COLLECTION_FAQ, gerar_embedding, qdrant
 
 logger = logging.getLogger(__name__)
 
@@ -11,9 +11,17 @@ logger = logging.getLogger(__name__)
 def faq_retriever(question: str) -> str:
     """Busca no FAQ oficial os trechos mais relevantes para responder a pergunta."""
     logger.info("faq_retriever tool called")
-    db = get_faq_db()  # só carrega (ou monta) na primeira chamada de verdade
-    results = db.similarity_search(question, k=6)
-    return "\n\n".join(trecho.page_content for trecho in results)
+    vetor = gerar_embedding(question)
 
+    resultados = qdrant.query_points(
+        collection_name=COLLECTION_FAQ,
+        query=vetor,
+        limit=6,
+    )
 
-faq_retriver = faq_retriever
+    if not resultados.points:
+        return "Nenhum trecho relevante encontrado no FAQ."
+
+    return "\n\n".join(
+        ponto.payload["page_content"] for ponto in resultados.points
+    )

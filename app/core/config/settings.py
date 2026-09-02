@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     MONGODB_URI: str = "mongodb://localhost:27017"
     MONGODB_DB: str = "assessor"
     SESSION_IDLE_MINUTES: int = 30
+    QDRANT_URL: str
+    QDRANT_API_KEY: str
 
     model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", extra="ignore")
 
