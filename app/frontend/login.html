@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>login — assistente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="auth-card">
+    <p class="auth-card__eyebrow">// bem-vindo de volta</p>
+    <h1 class="auth-card__title">entrar<span class="header__cursor">_</span></h1>
+
+    <form id="login-form" autocomplete="on">
+      <div class="auth-field">
+        <label for="email">e-mail</label>
+        <input type="email" id="email" name="email" required autocomplete="email" />
+      </div>
+      <div class="auth-field">
+        <label for="senha">senha</label>
+        <input type="password" id="senha" name="senha" required autocomplete="current-password" />
+      </div>
+      <button type="submit" class="auth-submit" id="entrar">entrar</button>
+    </form>
+
+    <p class="auth-hint" id="hint"></p>
+
+    <p class="auth-footer">
+      não tem conta? <a href="cadastro.html">cadastre-se</a>
+    </p>
+  </div>
+
+  <script src="login.js"></script>
+</body>
+</html>

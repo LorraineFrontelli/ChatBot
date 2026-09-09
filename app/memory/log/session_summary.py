@@ -37,15 +37,27 @@ def _collection():
     col = db[_COLLECTION]
     col.create_index("session_id")
     col.create_index("encerrada_em")
+    col.create_index("user_id")
     return col
 
 
-def buscar_ultimo_resumo(session_id: str) -> dict | None:
-    return _collection().find_one({"session_id": session_id}, sort=[("encerrada_em", -1)])
+def buscar_ultimo_resumo(session_id: str, user_id: int | None = None) -> dict | None:
+    """Acha onde o resumo desta sessão parou, pra `gerar_resumo_sessao`
+    continuar dali. `user_id` no filtro é defesa em profundidade: se por bug
+    um session_id colidisse entre dois usuários, não acha (nem estende) o
+    bloco resumido de outra pessoa. Fica opcional só porque /session/end
+    (chamado via sendBeacon, sem header de auth) não tem como saber quem é o
+    usuário — ver comentário em gerar_resumo_sessao."""
+    filtro: dict = {"session_id": session_id}
+    if user_id is not None:
+        filtro["user_id"] = user_id
+    return _collection().find_one(filtro, sort=[("encerrada_em", -1)])
 
 
-def buscar_resumos(session_id: str, busca: str | None = None, limite: int = 3) -> list[dict]:
-    """Resumos de blocos já encerrados deste session_id, mais recentes primeiro.
+def buscar_resumos(user_id: int, busca: str | None = None, limite: int = 3) -> list[dict]:
+    """Resumos de blocos já encerrados deste usuário, mais recentes primeiro
+    — cruza sessões/dispositivos, já que o filtro é por user_id (campo de
+    primeira classe no documento) e não por session_id de navegador.
 
     Usada pela tool `buscar_historico` (app/memory/tools/). O filtro
     `resumo $nin ["", None]` é essencial: sem ele, um bloco em andamento
@@ -54,7 +66,7 @@ def buscar_resumos(session_id: str, busca: str | None = None, limite: int = 3) -
     (case-insensitive) — é uma busca literal, não semântica: sinônimo do
     termo usado no resumo original não casa.
     """
-    filtro: dict = {"session_id": session_id, "resumo": {"$nin": ["", None]}}
+    filtro: dict = {"user_id": user_id, "resumo": {"$nin": ["", None]}}
     if busca:
         filtro["resumo"]["$regex"] = busca
         filtro["resumo"]["$options"] = "i"
@@ -66,13 +78,21 @@ def _formatar_conversa(mensagens: list[dict]) -> str:
     return "\n".join(f"{m['role']}: {m['content']}" for m in mensagens)
 
 
-def gerar_resumo_sessao(session_id: str, motivo: str) -> str | None:
+def gerar_resumo_sessao(session_id: str, motivo: str, user_id: int | None = None) -> str | None:
     """Resume as mensagens ainda não resumidas desta sessão (desde o último
     resumo salvo, ou desde o início, se nunca resumida) e grava o resultado.
     Retorna None se não houver mensagem nova pra resumir, ou se a LLM falhar
     — nunca levanta exceção, resumo é auxiliar, não pode travar o /chat.
+
+    `user_id` é opcional só por causa de quem chama sem ele: /session/end
+    (app/routes/session.py) é acionado via `navigator.sendBeacon`, que não
+    consegue mandar o header Authorization — não tem como essa rota saber
+    quem é o usuário. Quando falta, o documento simplesmente não carrega
+    user_id (mesmo status de um resumo legado, pré-multiusuário: órfão, não
+    aparece em nenhuma busca de buscar_historico que é sempre filtrada por
+    user_id). Quem chama autenticado (app/routes/chat.py) sempre passa.
     """
-    ultimo = buscar_ultimo_resumo(session_id)
+    ultimo = buscar_ultimo_resumo(session_id, user_id)
     desde = ultimo["mensagens_ate"] if ultimo else None
 
     mensagens = recuperar_mensagens_desde(session_id, desde)
@@ -87,12 +107,15 @@ def gerar_resumo_sessao(session_id: str, motivo: str) -> str | None:
         logger.exception("Falha ao gerar resumo da sessão %s; seguindo sem resumo.", session_id)
         return None
 
-    _collection().insert_one({
+    doc = {
         "session_id": session_id,
         "resumo": resumo,
         "mensagens_desde": mensagens[0]["timestamp"],
         "mensagens_ate": mensagens[-1]["timestamp"],
         "encerrada_em": datetime.now(timezone.utc),
         "motivo": motivo,
-    })
+    }
+    if user_id is not None:
+        doc["user_id"] = user_id
+    _collection().insert_one(doc)
     return resumo

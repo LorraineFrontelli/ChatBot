@@ -1,6 +1,7 @@
 import logging
 
 from langchain.tools import tool
+from langchain_core.runnables import RunnableConfig
 
 from app.infra.database.postgres_client import get_cursor
 
@@ -8,16 +9,20 @@ logger = logging.getLogger(__name__)
 
 
 @tool("total_balance")
-def total_balance() -> dict:
+def total_balance(config: RunnableConfig) -> dict:
     """Recupera do banco de dados o saldo atual a partir de todas as transações registradas"""
     logger.info("total_balance tool called")
+    user_id = (config or {}).get("configurable", {}).get("user_id")
+    if user_id is None:
+        logger.error("total_balance chamada sem user_id no config")
+        return {"status": "error", "message": "Não foi possível identificar o usuário."}
     try:
         with get_cursor() as cur:
-            cur.execute("SELECT coalesce(sum(amount), 0) FROM transactions WHERE type = 1")
+            cur.execute("SELECT coalesce(sum(amount), 0) FROM transactions WHERE type = 1 AND user_id = %s", (user_id,))
             income = cur.fetchone()[0]
             logger.debug("Income retrieved: %s", income)
 
-            cur.execute("SELECT coalesce(sum(amount), 0) FROM transactions WHERE type = 2")
+            cur.execute("SELECT coalesce(sum(amount), 0) FROM transactions WHERE type = 2 AND user_id = %s", (user_id,))
             expenses = cur.fetchone()[0]
             logger.debug("Expenses retrieved: %s", expenses)
 

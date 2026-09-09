@@ -21,20 +21,14 @@ from langchain_core.runnables import RunnableConfig
 # da função quebra o ciclo: nesse ponto todos os módulos já terminaram de
 # carregar.
 # ==============================================================================
-# POR QUE SÓ thread_id, SEM user_id
+# POR QUE user_id, NÃO session_id
 # ------------------------------------------------------------------------------
-# O front gera um UUID novo a cada "nova sessão" (ver frontend/app.js), e é
-# esse UUID que vira o thread_id do checkpointer (executar_fluxo, em
-# app/workflow/graph.py). Não existe hoje nenhum identificador mais estável
-# de USUÁRIO no projeto — nem no schemas.py, nem nas rotas.
-#
-# Então isto não é um fallback temporário: é o único identificador que existe.
-# Na prática, ele só encontra resumos de blocos fechados por INATIVIDADE
-# dentro da MESMA sessão de navegador ainda aberta (ver session_summary.py) —
-# um mesmo session_id pode acumular vários blocos resumidos sem que o usuário
-# clique em "nova sessão". Não alcança conversas de outro dispositivo, nem
-# depois de "nova sessão"/limpar o navegador: pra isso precisaria existir um
-# user_id fixo, que o front ainda não manda.
+# session_id é um UUID que o front troca a cada "nova sessão" (ver
+# frontend/app.js) — bom pra delimitar um BLOCO de conversa, ruim pra achar
+# histórico: some ao trocar de sessão/dispositivo. user_id vem do JWT (ver
+# get_current_user_id, app/security.py) e é estável pra sempre pro mesmo
+# usuário, então buscar_resumos() filtra por ele — alcança blocos resumidos
+# de qualquer sessão/dispositivo, não só o mesmo navegador ainda aberto.
 # ==============================================================================
 
 
@@ -53,13 +47,12 @@ def buscar_historico(busca: str, config: RunnableConfig) -> str:
     """
     from app.memory.log.session_summary import buscar_resumos  # ver comentário no topo do arquivo
 
-    configuravel = (config or {}).get("configurable", {})
-    session_id = configuravel.get("user_id") or configuravel.get("thread_id")
+    user_id = (config or {}).get("configurable", {}).get("user_id")
 
-    if not session_id:
-        return "Não foi possível identificar a sessão para buscar o histórico."
+    if user_id is None:
+        return "Não foi possível identificar o usuário para buscar o histórico."
 
-    resumos = buscar_resumos(session_id, busca=busca, limite=3)
+    resumos = buscar_resumos(user_id, busca=busca, limite=3)
 
     if not resumos:
         return "Nenhuma conversa anterior relevante encontrada."

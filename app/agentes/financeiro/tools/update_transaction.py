@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 from psycopg2.extensions import cursor
 from langchain.tools import tool
+from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
 from app.infra.database.postgres_client import get_cursor
@@ -44,7 +45,7 @@ class UpdateTransactionArgs(BaseModel):
 
 
 def _locate_target_ids(
-    cur: cursor, match_text: Optional[str], date_local: Optional[date]
+    cur: cursor, match_text: Optional[str], date_local: Optional[date], user_id: int
 ) -> List[int]:
     if not match_text or not date_local:
         logger.error("No unique identifier provided")
@@ -60,10 +61,11 @@ def _locate_target_ids(
         WHERE (t.source_text ILIKE %s OR t.description ILIKE %s)
             AND t.occurred_at >= %s
             AND t.occurred_at < %s
+            AND t.user_id = %s
         ORDER BY t.occurred_at DESC
         LIMIT 1;
         """,
-        (f"%{match_text}%", f"%{match_text}%", date_local, date_end),
+        (f"%{match_text}%", f"%{match_text}%", date_local, date_end, user_id),
     )
     rows = cur.fetchall()
     if not rows or len(rows) < 1:
@@ -80,6 +82,7 @@ class DynamicSet(TypedDict):
 
 def _prepare_dynamic_set(
     id: int,
+    user_id: int,
     amount: Optional[float],
     type_id: Optional[int],
     category_id: Optional[int],
@@ -124,13 +127,14 @@ def _prepare_dynamic_set(
         logger.error("Tried to update nothing")
         raise ValueError("Nenhum campo válido para atualizar.")
 
-    query = f"UPDATE transactions SET {', '.join(sets)} WHERE id = %s;"
+    query = f"UPDATE transactions SET {', '.join(sets)} WHERE id = %s AND user_id = %s;"
     params.append(id)
+    params.append(user_id)
 
     return {"query": query, "values": params}
 
 
-def _get_transaction_by_id(cur: cursor, id: int) -> Optional[dict]:
+def _get_transaction_by_id(cur: cursor, id: int, user_id: int) -> Optional[dict]:
     cur.execute(
         """
         SELECT
@@ -139,9 +143,9 @@ def _get_transaction_by_id(cur: cursor, id: int) -> Optional[dict]:
         FROM transactions t
         JOIN transaction_types tt ON tt.id = t.type
         LEFT JOIN categories c ON c.id = t.category_id
-        WHERE t.id = %s;
+        WHERE t.id = %s AND t.user_id = %s;
         """,
-        (id,),
+        (id, user_id),
     )
     r = cur.fetchone()
     return (
@@ -162,6 +166,7 @@ def _get_transaction_by_id(cur: cursor, id: int) -> Optional[dict]:
 
 @tool("update_transaction", args_schema=UpdateTransactionArgs)
 def update_transaction(
+    config: RunnableConfig,
     id: Optional[int] = None,
     match_text: Optional[str] = None,
     date_local: Optional[date] = None,
@@ -183,6 +188,10 @@ def update_transaction(
     Retorna: status, rows_affected, id, e o registro atualizado.
     """
     logger.info("update_transaction tool called")
+    user_id = (config or {}).get("configurable", {}).get("user_id")
+    if user_id is None:
+        logger.error("update_transaction chamada sem user_id no config")
+        return {"status": "error", "message": "Não foi possível identificar o usuário."}
 
     if not any([amount, type_id, type_name, category_id, category_name, description, payment_method, occurred_at]):
         logger.error("Tried to update nothing")
@@ -192,13 +201,18 @@ def update_transaction(
         with get_cursor() as cur:
             target_id = id
             if target_id is None:
-                target_ids = _locate_target_ids(cur, match_text, date_local)
+                target_ids = _locate_target_ids(cur, match_text, date_local, user_id)
                 if len(target_ids) > 1:
-                    found_transactions = [_get_transaction_by_id(cur, i) for i in target_ids]
+                    found_transactions = [_get_transaction_by_id(cur, i, user_id) for i in target_ids]
                     logger.error("More than one transaction located by update filters: ids=%s", target_ids)
                     return {"status": "error", "message": "Mais de uma transação encontrada pelos filtros.", "transacoes": found_transactions}
                 target_id = target_ids[0]
                 logger.debug("Update target transaction: id=%s", target_id)
+            elif _get_transaction_by_id(cur, target_id, user_id) is None:
+                # id informado direto, mas não pertence a este usuário (ou não existe):
+                # não revela se o id existe pra outra pessoa, só recusa.
+                logger.error("Transaction id=%s not found for user_id=%s", target_id, user_id)
+                return {"status": "error", "message": "Transação não encontrada."}
 
             resolved_type_id = resolve_type_id(cur, type_id, type_name) if (type_id or type_name) else None
             logger.debug("Resolved type id: %s", resolved_type_id)
@@ -210,6 +224,7 @@ def update_transaction(
 
             dynamic_set = _prepare_dynamic_set(
                 id=target_id,
+                user_id=user_id,
                 amount=amount,
                 type_id=resolved_type_id,
                 category_id=resolved_category_id,
@@ -223,7 +238,7 @@ def update_transaction(
             rows_affected = cur.rowcount
             logger.debug("Updated rows: %s", rows_affected)
 
-            updated = _get_transaction_by_id(cur, target_id)
+            updated = _get_transaction_by_id(cur, target_id, user_id)
             logger.info("Transaction updated successfully: %s", updated)
             return {"status": "ok", "rows_affected": rows_affected, "id": target_id, "updated": updated}
 

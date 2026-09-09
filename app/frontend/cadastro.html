@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cadastro — assistente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="auth-card">
+    <p class="auth-card__eyebrow">// primeiro acesso</p>
+    <h1 class="auth-card__title">criar conta<span class="header__cursor">_</span></h1>
+
+    <form id="cadastro-form" autocomplete="on">
+      <div class="auth-field">
+        <label for="nome">nome</label>
+        <input type="text" id="nome" name="nome" required autocomplete="name" />
+      </div>
+      <div class="auth-field">
+        <label for="email">e-mail</label>
+        <input type="email" id="email" name="email" required autocomplete="email" />
+      </div>
+      <div class="auth-field">
+        <label for="senha">senha</label>
+        <input type="password" id="senha" name="senha" required minlength="8" autocomplete="new-password" />
+        <small>mínimo de 8 caracteres</small>
+      </div>
+      <button type="submit" class="auth-submit" id="cadastrar">criar conta</button>
+    </form>
+
+    <p class="auth-hint" id="hint"></p>
+
+    <p class="auth-footer">
+      já tem conta? <a href="login.html">entrar</a>
+    </p>
+  </div>
+
+  <script src="cadastro.js"></script>
+</body>
+</html>

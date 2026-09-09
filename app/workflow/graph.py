@@ -42,13 +42,21 @@ def build_graph():
 fluxo_agentes = build_graph()
 
 
-def executar_fluxo(pergunta: str, session_id: str) -> dict:
-    """É isto que a rota /chat chama."""
+def executar_fluxo(pergunta: str, session_id: str, user_id: int) -> dict:
+    """É isto que a rota /chat chama.
+
+    thread_id combina user_id + session_id: isola o checkpoint do Mongo por
+    usuário (nenhum thread_id de um user colide com o de outro) e ainda
+    permite múltiplas conversas por usuário (uma por session_id/aba). O
+    user_id também vai solto no `configurable` — é dali que as tools do
+    financeiro/agenda (via RunnableConfig) leem de quem é a transação/evento,
+    e a tool buscar_historico usa pra localizar resumos do usuário."""
     mensagem_anon, mapa_pii = anonimizar_entrada(pergunta)
+    thread_id = f"user_{user_id}_{session_id}"
 
     resultado = fluxo_agentes.invoke(
         {"messages": [{"role": "human", "content": mensagem_anon}], "mapa_pii": mapa_pii},
-        config={"configurable": {"thread_id": session_id}},
+        config={"configurable": {"thread_id": thread_id, "user_id": user_id}},
     )
     return {
         "resposta": resultado["messages"][-1].content,

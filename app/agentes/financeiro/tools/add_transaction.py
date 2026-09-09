@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 
 from psycopg2.extensions import cursor
 from langchain.tools import tool
+from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
 from app.infra.database.postgres_client import get_cursor
@@ -40,26 +41,26 @@ class AddTransactionArgs(BaseModel):
     )
 
 
-def _insert_with_date(cur: cursor, *args: Tuple[float, int, int, str, str, str, str]):
+def _insert_with_date(cur: cursor, *args: Tuple[float, int, int, str, str, str, str, int]):
     cur.execute(
         """
         INSERT INTO transactions
-            (amount, type, category_id, description, payment_method, occurred_at, source_text)
+            (amount, type, category_id, description, payment_method, occurred_at, source_text, user_id)
         VALUES
-            (%s, %s, %s, %s, %s, %s::timestamptz, %s)
+            (%s, %s, %s, %s, %s, %s::timestamptz, %s, %s)
         RETURNING id, occurred_at;
         """,
         args,
     )
 
 
-def _insert_without_date(cur: cursor, *args: Tuple[float, int, int, str, str, str]):
+def _insert_without_date(cur: cursor, *args: Tuple[float, int, int, str, str, str, int]):
     cur.execute(
         """
         INSERT INTO transactions
-            (amount, type, category_id, description, payment_method, occurred_at, source_text)
+            (amount, type, category_id, description, payment_method, occurred_at, source_text, user_id)
         VALUES
-            (%s, %s, %s, %s, %s, NOW(), %s)
+            (%s, %s, %s, %s, %s, NOW(), %s, %s)
         RETURNING id, occurred_at;
         """,
         args,
@@ -70,6 +71,7 @@ def _insert_without_date(cur: cursor, *args: Tuple[float, int, int, str, str, st
 def add_transaction(
     amount: float,
     source_text: str,
+    config: RunnableConfig,
     occurred_at: Optional[str] = None,
     type_id: Optional[int] = None,
     type_name: Optional[str] = None,
@@ -80,6 +82,10 @@ def add_transaction(
 ) -> dict:
     """Insere uma transação financeira no banco de dados Postgres."""
     logger.info("add_transaction tool called")
+    user_id = (config or {}).get("configurable", {}).get("user_id")
+    if user_id is None:
+        logger.error("add_transaction chamada sem user_id no config")
+        return {"status": "error", "message": "Não foi possível identificar o usuário."}
     try:
         with get_cursor() as cur:
             resolved_type_id = resolve_type_id(cur, type_id, type_name)
@@ -95,9 +101,9 @@ def add_transaction(
             logger.debug("Category id resolved: %s", resolved_category_id)
 
             if occurred_at:
-                _insert_with_date(cur, amount, resolved_type_id, resolved_category_id, description, payment_method, occurred_at, source_text)
+                _insert_with_date(cur, amount, resolved_type_id, resolved_category_id, description, payment_method, occurred_at, source_text, user_id)
             else:
-                _insert_without_date(cur, amount, resolved_type_id, resolved_category_id, description, payment_method, source_text)
+                _insert_without_date(cur, amount, resolved_type_id, resolved_category_id, description, payment_method, source_text, user_id)
 
             new_id, occurred = cur.fetchone()
             logger.info("Transaction added successfully: id=%s, occurred_at=%s", new_id, occurred)

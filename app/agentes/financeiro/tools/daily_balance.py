@@ -2,6 +2,7 @@ import logging
 from datetime import date, timedelta
 
 from langchain.tools import tool
+from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
 from app.infra.database.postgres_client import get_cursor
@@ -24,25 +25,29 @@ class DailyBalanceArgs(BaseModel):
 
 
 @tool("daily_balance", args_schema=DailyBalanceArgs)
-def daily_balance(target_date: date) -> dict:
+def daily_balance(target_date: date, config: RunnableConfig) -> dict:
     """
     Retorna o saldo (INCOME - EXPENSES) do dia local informado em America/Sao_Paulo.
     Ignora TRANSFER (type=3)
     """
     logger.info("daily_balance tool called")
+    user_id = (config or {}).get("configurable", {}).get("user_id")
+    if user_id is None:
+        logger.error("daily_balance chamada sem user_id no config")
+        return {"status": "error", "message": "Não foi possível identificar o usuário."}
     query_date = target_date + timedelta(days=1)
     try:
         with get_cursor() as cur:
             cur.execute(
-                "SELECT coalesce(sum(amount), 0) FROM transactions WHERE type = 1 AND occurred_at < %s",
-                (query_date,),
+                "SELECT coalesce(sum(amount), 0) FROM transactions WHERE type = 1 AND occurred_at < %s AND user_id = %s",
+                (query_date, user_id),
             )
             income = cur.fetchone()[0]
             logger.debug("Retrieved income: %s", income)
 
             cur.execute(
-                "SELECT coalesce(sum(amount), 0) FROM transactions WHERE type = 2 AND occurred_at < %s",
-                (query_date,),
+                "SELECT coalesce(sum(amount), 0) FROM transactions WHERE type = 2 AND occurred_at < %s AND user_id = %s",
+                (query_date, user_id),
             )
             expenses = cur.fetchone()[0]
             logger.debug("Retrieved expenses: %s", expenses)

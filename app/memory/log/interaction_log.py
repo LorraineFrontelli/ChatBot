@@ -11,17 +11,24 @@ def _collection():
     col = db[_COLLECTION]
     col.create_index("session_id")
     col.create_index("timestamp")
+    col.create_index([("user_id", 1), ("session_id", 1)])
     return col
 
 
 def salvar_mensagem(
     session_id: str,
+    user_id: int,
     role: str,
     content: str,
     agentes_chamados: list[str] | None = None,
 ) -> None:
+    """`user_id` é campo de primeira classe aqui, não algo pra deduzir depois
+    fazendo parse do thread_id do LangGraph — vem sempre de
+    config["configurable"]["user_id"]/get_current_user_id, nunca do corpo
+    da requisição."""
     doc = {
         "session_id": session_id,
+        "user_id": user_id,
         "role": role,
         "content": content,
         "timestamp": datetime.now(timezone.utc),

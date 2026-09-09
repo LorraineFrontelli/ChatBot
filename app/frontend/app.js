@@ -5,6 +5,20 @@
 const API_BASE = "http://localhost:8000";
 const CHAT_ENDPOINT = `${API_BASE}/chat`;
 const SESSION_END_ENDPOINT = `${API_BASE}/session/end`;
+const TOKEN_STORAGE_KEY = "assistente_access_token";
+
+// ============================================================
+// Autenticação — sem token, nem carrega o console: manda pro login.
+// ============================================================
+const accessToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+if (!accessToken) {
+  window.location.href = "login.html";
+}
+
+function logout() {
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  window.location.href = "login.html";
+}
 
 // ============================================================
 // Elementos
@@ -70,6 +84,7 @@ let sessionId = obterOuCriarSessionId();
 exibirSessionId(sessionId);
 
 resetButton.addEventListener("click", iniciarNovaSessao);
+document.getElementById("logout").addEventListener("click", logout);
 
 // Cobre o fechar de aba/navegador — pagehide dispara de forma mais confiável
 // que beforeunload (inclusive com bfcache).
@@ -192,12 +207,20 @@ composer.addEventListener("submit", async (evento) => {
   try {
     const resposta = await fetch(CHAT_ENDPOINT, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem(TOKEN_STORAGE_KEY)}`,
+      },
       body: JSON.stringify({
         pergunta: pergunta,
         session_id: sessionId,
       }),
     });
+
+    if (resposta.status === 401) {
+      logout(); // token ausente/expirado — manda pro login de novo
+      return;
+    }
 
     if (!resposta.ok) {
       const detalhe = await resposta.text();

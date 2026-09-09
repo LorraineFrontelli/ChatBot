@@ -67,3 +67,24 @@ INSERT INTO categories (name) VALUES
   ('investimento'),
   ('presente'),
   ('outros');
+
+-- ==============================================================================
+-- Autenticação e isolamento por usuário
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS users (
+  id           SERIAL PRIMARY KEY,
+  nome         VARCHAR(100) NOT NULL,
+  email        VARCHAR(150) UNIQUE NOT NULL,
+  senha_hash   VARCHAR(255) NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ADD COLUMN IF NOT EXISTS em vez de recriar as tabelas: já existem
+-- transactions/events com dado de teste. Sem NOT NULL de propósito — os
+-- registros antigos ficam sem dono (user_id NULL) até um backfill manual;
+-- travar NOT NULL agora quebraria o INSERT desses dados existentes.
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE events       ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
+
+CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_events_user       ON events(user_id);

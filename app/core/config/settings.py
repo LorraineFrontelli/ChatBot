@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     SESSION_IDLE_MINUTES: int = 30
     QDRANT_URL: str
     QDRANT_API_KEY: str
+    JWT_SECRET: str
+    JWT_EXPIRE_MINUTES: int = 60 * 24
 
     model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", extra="ignore")
 

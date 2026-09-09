@@ -3,6 +3,7 @@ from typing import Optional
 from datetime import date
 
 from langchain.tools import tool
+from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
 from app.infra.database.postgres_client import get_cursor
@@ -49,6 +50,7 @@ class QueryTransactionsArgs(BaseModel):
 
 @tool("query_transactions", args_schema=QueryTransactionsArgs)
 def query_transactions(
+    config: RunnableConfig,
     source_text: Optional[str] = None,
     occurred_at_start: Optional[date] = None,
     occurred_at_end: Optional[date] = None,
@@ -65,6 +67,10 @@ def query_transactions(
     Se a data de início não for passada mas a de final for, retorna todas até a data de final.
     """
     logger.info("query_transactions tool called")
+    user_id = (config or {}).get("configurable", {}).get("user_id")
+    if user_id is None:
+        logger.error("query_transactions chamada sem user_id no config")
+        return {"status": "error", "message": "Não foi possível identificar o usuário."}
     try:
         limit_int = int(limit)
         if limit_int < 0:
@@ -84,9 +90,9 @@ def query_transactions(
                 FROM transactions t
                 JOIN transaction_types tt ON tt.id = t.type
                 LEFT JOIN categories c ON c.id = t.category_id
-                WHERE 1=1
+                WHERE t.user_id = %s
             """
-            params = []
+            params = [user_id]
 
             if source_text:
                 query += " AND t.source_text ILIKE %s"
