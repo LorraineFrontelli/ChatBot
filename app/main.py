@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config.settings import validar_config
-from app.routes import auth, chat, session
+from app.routes import auth, chat, perfil, session
 
 app = FastAPI(
     title="Assessor IA",
@@ -31,6 +31,7 @@ def health() -> dict:
 
 app.include_router(auth.router)
 app.include_router(chat.router)
+app.include_router(perfil.router)
 app.include_router(session.router)
 
 # Precisa vir por último: é um catch-all em "/", se viesse antes
