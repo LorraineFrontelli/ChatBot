@@ -8,10 +8,13 @@
    inteiramente o que estava salvo antes.
    ==================================================== */
 
-// Precisa ser o mesmo usuário que o chat usa. Se o backend usar outro
-// identificador quando o front não manda user_id, o assessor não vai
-// encontrar o perfil cadastrado aqui.
-const USER_ID = 'usuario_teste';
+// O usuário vem do token (mesmo do chat): o corpo não leva user_id, então o
+// perfil salvo aqui é sempre o de quem está logado.
+const TOKEN_STORAGE_KEY = 'assistente_access_token';
+const accessToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+if (!accessToken) {
+  window.location.href = 'login.html';
+}
 
 // A rota que a sua API precisa expor.
 const ENDPOINT = '/perfil';
@@ -35,7 +38,7 @@ const els = {
   echoBody: document.getElementById('echo-body'),
 };
 
-els.badge.textContent = USER_ID;
+els.badge.textContent = 'logado';
 
 /* ---------------------------------------------- lista de restrições */
 
@@ -100,7 +103,6 @@ function montarPayload() {
   // Campos vazios viram null de propósito, e a relação entre renda e gasto
   // não é conferida aqui: quem valida é a API, não esta tela.
   return {
-    user_id: USER_ID,
     renda_mensal: numeroOuNulo(els.renda.value),
     gasto_fixo_mensal: numeroOuNulo(els.gasto.value),
     horizonte_meses: numeroOuNulo(els.horizonte.value),
@@ -124,9 +126,18 @@ async function salvar() {
   try {
     const resposta = await fetch(API_BASE + ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
       body: JSON.stringify(payload),
     });
+
+    if (resposta.status === 401) {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      window.location.href = 'login.html';
+      return;
+    }
 
     let corpo = null;
     try {

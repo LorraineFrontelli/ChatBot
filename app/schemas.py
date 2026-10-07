@@ -61,12 +61,10 @@ class SessionResponse(BaseModel):
 class PerfilRequest(BaseModel):
     """O que a tela Perfil envia no POST /perfil.
 
-    `user_id` vem do corpo mesmo (e não de um token, como em /chat): esta
-    rota não tem autenticação, é o contrato explícito da prova. Salvar de
-    novo com o mesmo user_id substitui o cadastro inteiro, restrições
-    incluídas — não é um PATCH incremental."""
-    user_id:            str = Field(..., min_length=1, examples=["usuario_teste"])
-    renda_mensal:        float = Field(..., gt=0, examples=[6000])
+    Não leva `user_id`: o usuário vem do token, como em /chat. Salvar de
+    novo substitui o cadastro inteiro, restrições incluídas — não é um
+    PATCH incremental."""
+    renda_mensal:       float = Field(..., gt=0, examples=[6000])
     gasto_fixo_mensal:   float = Field(..., ge=0, examples=[3800])
     horizonte_meses:     int = Field(..., ge=1, le=120, examples=[18])
     perfil_investidor:   Literal["conservador", "moderado", "arrojado"]

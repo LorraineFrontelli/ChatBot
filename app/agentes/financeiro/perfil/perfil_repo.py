@@ -3,8 +3,8 @@ perfil de investidor), guardada no Mongo. O texto livre (`restricoes`) não
 mora aqui: fica no Qdrant (ver restricoes_repo.py), porque precisa de busca
 semântica, não de consulta direta por campo.
 
-`user_id` chega como string (é o contrato do POST /perfil, sem autenticação
-— ver JUSTIFICATIVA.md) e é gravado exatamente como chegou.
+`user_id` é o id do usuário autenticado (token JWT), convertido para string
+pela rota e gravado exatamente como chegou.
 """
 from datetime import datetime, timezone
 
