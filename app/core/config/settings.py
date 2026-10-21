@@ -1,5 +1,6 @@
 """Único ponto de leitura do .env do projeto."""
 
+import os
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,11 +21,27 @@ class Settings(BaseSettings):
     QDRANT_API_KEY: str
     JWT_SECRET: str
     JWT_EXPIRE_MINUTES: int = 60 * 24
+    # Juiz de fidelidade (JEV, TypeSafe): opcional. Sem a chave, o juiz
+    # troca toda resposta pela frase fixa ([juiz] sem_chave).
+    TYPESAFE_API_KEY: str = ""
+    # LangSmith (opcional): sem a chave, o tracing fica desligado e o app
+    # funciona igual.
+    LANGSMITH_TRACING: bool = False
+    LANGSMITH_API_KEY: str = ""
+    LANGSMITH_PROJECT: str = "assessor-aula"
 
     model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", extra="ignore")
 
 
 settings = Settings()
+
+# O pydantic-settings lê o .env só para preencher `settings`, sem exportar
+# para os.environ. O LangChain/LangSmith lê estas três direto do ambiente,
+# então elas são repassadas daqui. Não sobrescreve o que já estiver no ambiente.
+if settings.LANGSMITH_TRACING and settings.LANGSMITH_API_KEY:
+    os.environ.setdefault("LANGSMITH_TRACING", "true")
+    os.environ.setdefault("LANGSMITH_API_KEY", settings.LANGSMITH_API_KEY)
+    os.environ.setdefault("LANGSMITH_PROJECT", settings.LANGSMITH_PROJECT)
 
 
 def validar_config() -> list[str]:

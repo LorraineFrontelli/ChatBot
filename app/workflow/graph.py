@@ -2,6 +2,7 @@ from langgraph.graph import END, StateGraph
 
 from app.guardrail import anonimizar_entrada
 from app.memory.session.mongo_checkpointer import get_checkpointer
+from app.observability import abrir_turno, fechar_turno, status_do_estado
 from app.workflow.edges.routing_edges import decidir_pos_guardrail_entrada, decidir_pos_router
 from app.workflow.nodes.agenda_node import agenda_node
 from app.workflow.nodes.faq_node import faq_node
@@ -51,15 +52,24 @@ def executar_fluxo(pergunta: str, session_id: str, user_id: int) -> dict:
     user_id também vai solto no `configurable` — é dali que as tools do
     financeiro/agenda (via RunnableConfig) leem de quem é a transação/evento,
     e a tool buscar_historico usa pra localizar resumos do usuário."""
-    mensagem_anon, mapa_pii = anonimizar_entrada(pergunta)
-    thread_id = f"user_{user_id}_{session_id}"
+    
+    turno_id = abrir_turno()
+    status = "erro"
+    rota = ""
+    try:
+        mensagem_anon, mapa_pii = anonimizar_entrada(pergunta)
+        thread_id = f"user_{user_id}_{session_id}"
 
-    resultado = fluxo_agentes.invoke(
-        {"messages": [{"role": "human", "content": mensagem_anon}], "mapa_pii": mapa_pii},
-        config={"configurable": {"thread_id": thread_id, "user_id": user_id}},
-    )
-    return {
-        "resposta": resultado["messages"][-1].content,
-        "agentes_chamados": resultado.get("agentes_chamados", []),
-        "pergunta_anonimizada": mensagem_anon,
-    }
+        resultado = fluxo_agentes.invoke(
+            {"messages": [{"role": "human", "content": mensagem_anon}], "mapa_pii": mapa_pii},
+            config={"configurable": {"thread_id": thread_id, "user_id": user_id}},
+        )
+        status = status_do_estado(resultado)
+        rota = resultado.get("rota") or ""
+        return {
+            "resposta": resultado["messages"][-1].content,
+            "agentes_chamados": resultado.get("agentes_chamados", []),
+            "pergunta_anonimizada": mensagem_anon,
+        }
+    finally:
+        fechar_turno(turno_id, session_id=session_id, rota=rota, status=status)
