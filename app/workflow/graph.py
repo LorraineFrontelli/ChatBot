@@ -9,6 +9,7 @@ from app.workflow.nodes.faq_node import faq_node
 from app.workflow.nodes.financeiro_node import financeiro_node
 from app.workflow.nodes.guardrail_entrada_node import guardrail_entrada_node
 from app.workflow.nodes.guardrail_saida_node import guardrail_saida_node
+from app.workflow.nodes.juiz_node import juiz_node
 from app.workflow.nodes.orquestrador_node import orquestrador_node
 from app.workflow.nodes.router_node import router_node
 from app.workflow.state.state import Estado
@@ -23,6 +24,7 @@ def build_graph():
     grafo.add_node("faq", faq_node)
     grafo.add_node("orquestrador", orquestrador_node)
     grafo.add_node("guardrail_saida", guardrail_saida_node)
+    grafo.add_node("juiz", juiz_node)
 
     grafo.set_entry_point("guardrail_entrada")
     grafo.add_conditional_edges("guardrail_entrada", decidir_pos_guardrail_entrada,
@@ -33,8 +35,9 @@ def build_graph():
 
     grafo.add_edge("financeiro", "orquestrador")
     grafo.add_edge("agenda", "orquestrador")
-    grafo.add_edge("faq", "guardrail_saida")
-    grafo.add_edge("orquestrador", "guardrail_saida")
+    grafo.add_edge("faq", "juiz")
+    grafo.add_edge("orquestrador", "juiz")
+    grafo.add_edge("juiz", "guardrail_saida")
     grafo.add_edge("guardrail_saida", END)
 
     return grafo.compile(checkpointer=get_checkpointer())

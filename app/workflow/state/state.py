@@ -11,3 +11,4 @@ class Estado(MessagesState):
     pergunta_anonimizada: str
     resposta_roteador: str
     resposta_bruta: str
+    evidencia: str
