@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     QDRANT_API_KEY: str
     JWT_SECRET: str
     JWT_EXPIRE_MINUTES: int = 60 * 24
+    MCP_USER_ID: int | None = None
+    GOOGLE_OAUTH_CREDENTIALS: str = "gcp-oauth.keys.json"
+    GOOGLE_CALENDAR_MCP_URL: str = "https://calendarmcp.googleapis.com/mcp/v1"
+    GOOGLE_CALENDAR_ACCESS_TOKEN: str = ""
     # Juiz de fidelidade (JEV, TypeSafe): opcional. Sem a chave, o juiz
     # troca toda resposta pela frase fixa ([juiz] sem_chave).
     TYPESAFE_API_KEY: str = ""

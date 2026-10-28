@@ -4,5 +4,10 @@ from app.memory.tools import TOOLS_MEMORIA
 
 from ..llms import specialist_llm
 from .agenda_prompts import AGENDA_PROMPT
+from .tools import TOOLS_AGENDA, TOOLS_GOOGLE
 
-agenda_app = create_agent(model=specialist_llm, system_prompt=AGENDA_PROMPT, tools=TOOLS_MEMORIA)
+agenda_app = create_agent(
+    model=specialist_llm,
+    system_prompt=AGENDA_PROMPT,
+    tools=TOOLS_AGENDA + TOOLS_GOOGLE + TOOLS_MEMORIA,
+)
